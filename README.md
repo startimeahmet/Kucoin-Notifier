@@ -1,2 +1,15 @@
 # Kucoin-Notifier
-Sends you an email when an order is filled on your Kucoin account
+
+When an open order gets partially/fully filled, send you an email including the respective market pair and the filled amount. Checks every 15 seconds.
+
+Prerequisites: 
+```
+pip install kucoin-python
+```
+
+Running:
+
+`python3 notifier.py`
+
+
+
