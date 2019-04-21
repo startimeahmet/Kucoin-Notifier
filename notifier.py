@@ -1,16 +1,19 @@
-from kucoin.client import Client
-from apscheduler.schedulers.background import BackgroundScheduler
-import smtplib, ssl
-import json, time
-from email.mime.text import MIMEText
+import smtplib
+import ssl
+import time
 from email.mime.multipart import MIMEMultipart
- 
+from email.mime.text import MIMEText
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from kucoin.client import Client
+
 REFRESH_INTERVAL = 15 #seconds
  
 scheduler = BackgroundScheduler()
 scheduler.start()
 
 client = Client("api_key", "api_secret", "passphrase")
+
 
 def send_mail(filled_amount, filled_coin):
 	print(filled_amount, filled_coin)
@@ -36,6 +39,7 @@ A """ + filled_coin[i] + """ order got filled with amount """ + filled_amount[i]
 		server.login(sender_email, password)
 		server.sendmail(sender_email, receiver_email, msg.as_string())
 
+		
 def getFills():
 	fill_ids = []
 	
@@ -46,54 +50,56 @@ def getFills():
 		
 	return fill_ids
  
+	
 def main():
+    # Call our function the first time
+    myFunction()
 
-	flag = False
-	# Call our function the first time
-	myFunction(flag)
- 
     # then every "REFRESH_INTERVAL" seconds after that.
-	scheduler.add_job(myFunction, 'interval', args=[flag], seconds = REFRESH_INTERVAL)
+    scheduler.add_job(myFunction, 'interval', seconds=REFRESH_INTERVAL)
 
-	# main loop
-	while True:
-		time.sleep(1)
- 
-def myFunction(flag):
-	print("i am running don't worry")
-	
-	filled_orders = []
+    # main loop
+    while True:
+        time.sleep(1)
 
-	if flag == False:
-		fill_ids = getFills()
-		flag = True
 
-	new_fill_ids = getFills()
+old_fill_ids = getFills()
 
-	print(fill_ids)
-	print(new_fill_ids)
-	
-	temp_fill_ids = new_fill_ids.copy()
 
-	while True:
-		if new_fill_ids != fill_ids:
-			filled_orders.append(new_fill_ids.pop(0))
-		else:
-			break
-		
-	if filled_orders != []:
-		
-		filled_amount = []
-		filled_coin = []
-		
-		for i in range(len(filled_orders)):
-			filled_amount.append(client.get_fills(order_id=filled_orders[i])["items"][0]["size"])
-			filled_coin.append(client.get_fills(order_id=filled_orders[i])["items"][0]["symbol"])
-		
-		print("An order is filled")
-		send_mail(filled_amount, filled_coin)
-		
-	fill_ids = temp_fill_ids.copy()
- 
+def myFunction():
+    print("i am running don't worry")
+
+    filled_orders = []
+
+    global old_fill_ids
+
+    new_fill_ids = getFills()
+
+    print(old_fill_ids)
+    print(new_fill_ids)
+
+    temp_fill_ids = new_fill_ids.copy()
+
+    while True:
+        if new_fill_ids != old_fill_ids:
+            filled_orders.append(new_fill_ids.pop(0))
+        else:
+            break
+
+    if filled_orders:
+
+        filled_amount = []
+        filled_coin = []
+
+        for i in range(len(filled_orders)):
+            filled_amount.append(client.get_fills(order_id=filled_orders[i])["items"][0]["size"])
+            filled_coin.append(client.get_fills(order_id=filled_orders[i])["items"][0]["symbol"])
+
+        print("An order is filled")
+        send_mail(filled_amount, filled_coin)
+
+    old_fill_ids = temp_fill_ids.copy()
+
+
 if __name__ == "__main__":
     main()
